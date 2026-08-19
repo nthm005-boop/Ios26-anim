@@ -20,15 +20,15 @@
 #import <objc/runtime.h>
 
 // ---------- TUNABLES (edit these to taste) ----------
-static const double kOpenResponse      = 0.42;  // lower = snappier
-static const double kOpenDamping       = 0.82;  // ~iOS 26 feel
-static const double kCloseResponse     = 0.38;
-static const double kCloseDamping      = 0.85;
-static const double kOpenDuration      = 0.45;  // real duration in seconds
-static const double kCloseDuration     = 0.40;
-static const double kGlassBlurAlpha    = 0.60;
-static const double kGlassFadeIn       = 0.08;
-static const double kGlassFadeOut      = 0.15;
+static const double kOpenResponse      = 0.90;  // lower = snappier
+static const double kOpenDamping       = 0.60;  // ~iOS 26 feel
+static const double kCloseResponse     = 0.90;
+static const double kCloseDamping      = 0.60;
+static const double kOpenDuration      = 1.50;  // iOS 16 default ~0.55
+static const double kCloseDuration     = 1.50;
+static const double kGlassBlurAlpha    = 0.95;
+static const double kGlassFadeIn       = 0.12;
+static const double kGlassFadeOut      = 0.22;
 // ----------------------------------------------------
 
 // Forward decls for private classes / structs
@@ -54,41 +54,36 @@ static BOOL gIsOpening = YES;
 static UIVisualEffectView *gGlassOverlay = nil;
 
 static void presentGlassOverlay(void) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *kw = nil;
-        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
-            if ([scene isKindOfClass:[UIWindowScene class]] && scene.activationState == UISceneActivationStateForegroundActive) {
-                for (UIWindow *w in scene.windows) {
-                    if (w.isKeyWindow) { kw = w; break; }
-                }
+    UIWindow *kw = nil;
+    for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+        if ([scene isKindOfClass:[UIWindowScene class]]) {
+            for (UIWindow *w in scene.windows) {
+                if (w.isKeyWindow) { kw = w; break; }
             }
-            if (kw) break;
         }
-        if (!kw) return;
+        if (kw) break;
+    }
+    if (!kw) return;
 
-        if (gGlassOverlay) { 
-            [gGlassOverlay removeFromSuperview]; 
-            gGlassOverlay = nil; 
-        }
+    if (gGlassOverlay) { [gGlassOverlay removeFromSuperview]; gGlassOverlay = nil; }
 
-        UIBlurEffect *blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterial];
-        gGlassOverlay = [[UIVisualEffectView alloc] initWithEffect:blur];
-        gGlassOverlay.frame = kw.bounds;
-        gGlassOverlay.alpha = 0.0;
-        gGlassOverlay.userInteractionEnabled = NO;
-        [kw addSubview:gGlassOverlay];
+    UIBlurEffect *blur = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterial];
+    gGlassOverlay = [[UIVisualEffectView alloc] initWithEffect:blur];
+    gGlassOverlay.frame = kw.bounds;
+    gGlassOverlay.alpha = 0.0;
+    gGlassOverlay.userInteractionEnabled = NO;
+    [kw addSubview:gGlassOverlay];
 
-        [UIView animateWithDuration:kGlassFadeIn animations:^{
-            gGlassOverlay.alpha = kGlassBlurAlpha;
-        } completion:^(BOOL fin){
-            [UIView animateWithDuration:kGlassFadeOut delay:0.02 options:UIViewAnimationOptionCurveEaseOut animations:^{
-                gGlassOverlay.alpha = 0.0;
-            } completion:^(BOOL f){
-                [gGlassOverlay removeFromSuperview];
-                gGlassOverlay = nil;
-            }];
+    [UIView animateWithDuration:kGlassFadeIn animations:^{
+        gGlassOverlay.alpha = kGlassBlurAlpha;
+    } completion:^(BOOL fin){
+        [UIView animateWithDuration:kGlassFadeOut delay:0.05 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            gGlassOverlay.alpha = 0.0;
+        } completion:^(BOOL f){
+            [gGlassOverlay removeFromSuperview];
+            gGlassOverlay = nil;
         }];
-    });
+    }];
 }
 
 // ============ HOOKS ============
@@ -109,19 +104,10 @@ static void presentGlassOverlay(void) {
 //    when constructing the spring animators that drive the morph.
 %hook SBFluidBehaviorSettings
 - (double)response {
-    double orig = %orig;
-    if (orig > 0.3 && orig < 0.8) {
-        return gIsOpening ? kOpenResponse : kCloseResponse;
-    }
-    return orig;
+    return gIsOpening ? kOpenResponse : kCloseResponse;
 }
-
 - (double)dampingRatio {
-    double orig = %orig;
-    if (orig > 0.3 && orig < 1.0) {
-        return gIsOpening ? kOpenDamping : kCloseDamping;
-    }
-    return orig;
+    return gIsOpening ? kOpenDamping : kCloseDamping;
 }
 %end
 
@@ -168,12 +154,10 @@ static void presentGlassOverlay(void) {
     %orig;
     // After SpringBoard sets up its layers, bump the icon-view's
     // corner radius so the morph holds the rounded shape longer.
-    @try {
-        UIView *iconView = [(NSObject *)self valueForKey:@"iconView"];
-        if (iconView) {
-            iconView.layer.cornerCurve = kCACornerCurveContinuous;
-        }
-    } @catch (NSException *e) {}
+    UIView *iconView = [(NSObject *)self valueForKey:@"iconView"];
+    if (iconView) {
+        iconView.layer.cornerCurve = kCACornerCurveContinuous;
+    }
 }
 %end
 
