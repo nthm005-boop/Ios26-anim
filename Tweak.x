@@ -20,13 +20,13 @@
 #import <objc/runtime.h>
 
 // ---------- TUNABLES (edit these to taste) ----------
-static const double kOpenResponse      = 0.42;  // lower = snappier (fixed: 0.90 was too sluggish)
+static const double kOpenResponse      = 0.42;  // lower = snappier
 static const double kOpenDamping       = 0.82;  // ~iOS 26 feel
 static const double kCloseResponse     = 0.38;
 static const double kCloseDamping      = 0.85;
-static const double kOpenDuration      = 0.45;  // fixed: 1.50 was 3x slower than default
+static const double kOpenDuration      = 0.45;  // real duration in seconds
 static const double kCloseDuration     = 0.40;
-static const double kGlassBlurAlpha    = 0.60;  // fixed: reduced high alpha blur
+static const double kGlassBlurAlpha    = 0.60;
 static const double kGlassFadeIn       = 0.08;
 static const double kGlassFadeOut      = 0.15;
 // ----------------------------------------------------
